@@ -1,4 +1,3 @@
-
 import Foundation
 /*
          Heap
@@ -38,11 +37,6 @@ import Foundation
 //        The (Heap Property) is satisfied when for example in a min Heap the root is smaller than
 //        any of its children, in a max Heap the root is greater than any child nodes
 
-//Formula for getting index position of any node
-//node    formula
-//parent    (index - 1) / 2
-//left child    (index * 2) + 1
-//right child    (index * 2) + 2
 
 // Objective: create a Heap and be able to retrieve any parent or left and right child nodes
 
@@ -60,13 +54,31 @@ struct Heap {
   // data structure for our Heap nodes is an array
   private var nodes = [2, 8, 21, 10, 16, 30, 36]
     
-    private var orderingCriteria: (Int, Int) -> Bool
+    public var count: Int {
+        return nodes.count
+    }
+
+  private var orderingCriteria: (Int, Int) -> Bool
+
+  public init(_ sort: @escaping (Int, Int) -> Bool) {
+    self.orderingCriteria = sort // < (min heap) , > (max heap)
+  }
     
-    // heap will be created before our initializer will be used
-    public init(_ sort: @escaping (Int, Int) -> Bool) {
-        self.orderingCriteria = sort // < (min heap), > (max heap)
+    public init(_ array: [Int], _ sort: @escaping (Int, Int) -> Bool){
+        self.orderingCriteria = sort
+        convert(array: array)
     }
     
+    //convert an array to a Heap(Heapify)
+    private mutating func convert(array: [Int]) {
+        nodes = array
+        
+        for i in stride(from: nodes.count / 2 - 1, through: 0, by: -1) {
+            //works from the top
+            shiftDown(from: i, to: nodes.count)
+        }
+    }
+
   // get the parent index
   public func parentIndex(_ index: Int) -> Int {
     return (index - 1) / 2
@@ -103,48 +115,101 @@ struct Heap {
     // return nodes[0]
     return nodes.first // returns an optional
   }
-    
-    //insert
-    
-    /*
-              2
-           /    \
-          8      21
-         / \    /  \
-        10  16  30   36
-        /
-        -6
-    */
-    
-    public mutating func insert(_ item: Int) {
-        //append new element to the end of the array
-        nodes.append(item)
-        shiftUp(nodes.count-1)
+
+  // insert
+
+  /*
+          2 [0]
+       /    \
+      8      21
+     / \    /  \
+    10  16  30   36
+    /
+  -6 [7]
+*/
+  public mutating func insert(_ item: Int) {
+    // append new element to the end of the array
+    nodes.append(item)
+    shiftUp(nodes.count - 1) // pass in last index
+  }
+
+  // shift up in order to heapify the heap and safisfy the Heap Property
+  private mutating func shiftUp(_ index: Int) {
+    let child = nodes[index] // new element to be added
+    var childIndex = index // starts off as the last index
+    var parentIndex = self.parentIndex(childIndex)
+
+    // orderingCriteria is a closure that will take in either a
+    // min heap closure or max heap closure
+    // Heap(<) min
+    // Heap(>) max
+    while childIndex > 0 && orderingCriteria(child, nodes[parentIndex]) {
+      // keep swapping
+      nodes[childIndex] = nodes[parentIndex] // swap child and parent value
+      childIndex = parentIndex // traverse up the heap
+      parentIndex = self.parentIndex(childIndex) // find new parent index
     }
-    
-    //shift up in order to heapify the heap and satisfy the heap property
-    public mutating func shiftUp(_ index: Int){
-        let child = nodes[index]
-        var childIndex = index //starts off as the last index
-        var parentIndex = self.parentIndex(childIndex)
-        
-        //orderingCriteria is a closure that will take in either a min Sort closure or a max heap closure
-        //Heap(<) represents min
-        //Heap(>) represents max
-        
-        while childIndex > 0 && orderingCriteria(child, nodes[parentIndex]) {
-              // keep swapping
-            nodes[childIndex] = nodes[parentIndex] // swap child and parent value
-            childIndex = parentIndex //traverse up the heap
-            parentIndex = self.parentIndex(childIndex) // find new parent index
-        }
-        
-        //at the end of the comparison we will insert the child
-        //in the appropriate position
-        nodes[childIndex] = child
+
+    // at the end of the comparison we will insert the child
+    // in the appropriate position
+    nodes[childIndex] = child // new child inserted
+  }
+
+  // always removed the top node
+  mutating func remove() -> Int? { // remove the top, could be min or max based on the type of Heap
+    // check if the Heap is empty
+    guard !nodes.isEmpty else { return nil }
+
+    // if the Heap has only one child, remove and return the node
+    if nodes.count == 1 {
+      return nodes.removeLast()
     }
-    
-    
+
+    // if multiple nodes exist
+    let removedValue = nodes[0] // first value or top value
+
+    nodes[0] = nodes.removeLast() // remove the last value and insert into the first position
+
+    // heapify the Heap, or make sure the Heap Property is satisfied
+    shiftDown(from: 0, to: nodes.count)
+
+    return removedValue
+  }
+
+  mutating func shiftDown(from index: Int, to endIndex: Int) {
+    let leftChildIndex = self.leftChildIndex(index)
+    let rightChildIndex = self.rightChildIndex(index)
+
+    var currentIndex = index // in this case starts from 0 or the top of the Heap
+
+    // compare left child and right child vs the current index or parent index
+    if leftChildIndex < endIndex && orderingCriteria(nodes[leftChildIndex], nodes[currentIndex]) {
+      currentIndex = leftChildIndex
+    }
+    if rightChildIndex < endIndex && orderingCriteria(nodes[rightChildIndex], nodes[currentIndex]) {
+      currentIndex = rightChildIndex
+    }
+
+    // if current index is equal to index then no swaps will take place
+    if currentIndex == index {
+      return // exit
+    }
+
+    // otherwise we need to swap indices: currentIndex swap with index
+    nodes.swapAt(currentIndex, index) // swaps indices in place, runtime is constant O(1)
+
+
+    // keep performing step above recursivly
+    shiftDown(from: currentIndex, to: endIndex)
+  }
+
+  /*
+          10
+        /    \
+       2      21
+      / \    /  \
+    8   16  30   36
+  */
 }
 
 /*
@@ -155,7 +220,8 @@ struct Heap {
     10  16  30   36
 */
 
-var minHeap = Heap(<)
+
+var minHeap = Heap(<) // < denotes that it's a min heap
 
 print(minHeap.parentIndex(5)) // 2
 
@@ -171,13 +237,27 @@ print(minHeap.rightChild(6) ?? -999) // nil
 
 print(minHeap.peek() ?? -999) // 2
 
+ /*
+         -6
+       /    \
+      2      21
+     / \    /  \
+    8  16  30   36
+   /
+  10
+*/
+
 minHeap.insert(-6)
 
-print(minHeap.peek() ?? -999) //-6
+print(minHeap.peek() ?? -999) // -6
 
-print(minHeap.leftChild(0) ?? -999)
+print(minHeap.leftChild(0) ?? -999) // 2
+print(minHeap.rightChild(0) ?? -999) // 21
 
-print(minHeap.rightChild(0) ?? -99)
+// test remove
+print(minHeap.remove() ?? -999) // -6
+
+print(minHeap.peek() ?? -999) // 2
 
 
 // Preview
@@ -186,3 +266,10 @@ print(minHeap.rightChild(0) ?? -99)
 // arr.reduce(0, +)
 // Heap(>) max, descending
 // Heap(<) min, ascending
+
+// test creating a heap from an unsorted array
+var heap = Heap([10,4,12,0,-3,7], >) // < min heap, max heap
+print(heap.peek() ?? -999)
+
+let _ = heap.remove()
+print(heap.peek() ?? -999)
